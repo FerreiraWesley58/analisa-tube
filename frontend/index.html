@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AnalisaTube - Analisador de Vídeos do YouTube</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.2/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --secondary-light: #f472b6;
+            --secondary-dark: #db2777;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gradient-start: #6366f1;
+            --gradient-end: #ec4899;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: white;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            transition: all 0.3s ease;
+        }
+        
+        .logo:hover {
+            transform: scale(1.05);
+        }
+        
+        .logo svg {
+            height: 32px;
+            width: 32px;
+            fill: var(--primary);
+        }
+        
+        main {
+            padding: 60px 0;
+        }
+        
+        .hero {
+            text-align: center;
+            margin-bottom: 60px;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        h1 {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(to right, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .subtitle {
+            font-size: 18px;
+            color: #64748b;
+            max-width: 700px;
+            margin: 0 auto 40px;
+        }
+        
+        .url-input {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 40px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+        
+        .url-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            width: 20px;
+            height: 20px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 16px 16px 16px 45px;
+            border: 2px solid var(--gray);
+            border-radius: 12px;
+            font-size: 16px;
+            transition: all 0.3s;
+            width: 100%;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 28px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .card:hover {
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+            transform: translateY(-5px);
+        }
+        
+        .video-preview {
+            display: none;
+            margin-bottom: 40px;
+        }
+        
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .section-title svg {
+            width: 24px;
+            height: 24px;
+            color: var(--primary);
+        }
+        
+        .video-info {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .video-thumbnail {
+            width: 320px;
+            height: 180px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+        
+        .video-thumbnail:hover {
+            transform: scale(1.02);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .video-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: all 0.5s;
+        }
+        
+        .video-thumbnail:hover img {
+            transform: scale(1.05);
+        }
+        
+        .video-details {
+            flex: 1;
+        }
+        
+        .video-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--dark);
+            line-height: 1.4;
+        }
+        
+        .video-channel {
+            font-size: 16px;
+            color: #64748b;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .channel-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--primary-light);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .video-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 18px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background-color: #f8fafc;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        
+        .stat:hover {
+            background-color: #f1f5f9;
+            transform: translateY(-2px);
+        }
+        
+        .progress-container {
+            display: none;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin: 30px 0;
+            position: relative;
+        }
+        
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--gray);
+            z-index: 1;
+        }
+        
+        .step {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 25%;
+        }
+        
+        .step-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: var(--gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .step.active .step-icon {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            box-shadow: 0 2px 10px rgba(99, 102, 241, 0.4);
+            transform: scale(1.1);
+        }
+        
+        .step.completed .step-icon {
+            background: var(--success);
+        }
+        
+        .step-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+        
+        .step.active .step-label {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            margin: 30px 0;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .progress {
+            height: 100%;
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+        }
+        
+        .status {
+            font-size: 16px;
+            color: #64748b;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .animation-container {
+            width: 120px;
+            height: 120px;
+            margin: 30px auto;
+        }
+        
+        .result-container {
+            display: none;
+            margin-top: 40px;
+        }
+        
+        .summary-content {
+            font-size: 16px;
+            line-height: 1.8;
+            color: #334155;
+        }
+        
+        .summary-content h1 {
+            font-size: 28px;
+            margin: 28px 0 18px;
+            color: var(--dark);
+            background: none;
+            -webkit-background-clip: unset;
+            background-clip: unset;
+        }
+        
+        .summary-content h2 {
+            font-size: 22px;
+            margin: 24px 0 16px;
+            color: var(--dark);
+        }
+        
+        .summary-content h3 {
+            font-size: 18px;
+            margin: 20px 0 14px;
+            color: var(--dark);
+        }
+        
+        .summary-content p {
+            margin-bottom: 16px;
+        }
+        
+        .summary-content ul,
+        .summary-content ol {
+            padding-left: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .summary-content li {
+            margin-bottom: 10px;
+        }
+        
+        .summary-content strong {
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        .result-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-icon {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-icon svg {
+            width: 18px;
+            height: 18px;
+        }
+        
+        .result-actions button.secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            box-shadow: none;
+        }
+        
+        .result-actions button.secondary:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .toast {
+            background: white;
+            color: var(--dark);
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            min-width: 300px;
+            max-width: 400px;
+        }
+        
+        .toast.show {
+            transform: translateX(0);
+        }
+        
+        .toast-icon {
+            width: 24px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        
+        .toast.success {
+            border-left: 4px solid var(--success);
+        }
+        
+        .toast.success .toast-icon {
+            color: var(--success);
+        }
+        
+        .toast.error {
+            border-left: 4px solid var(--error);
+        }
+        
+        .toast.error .toast-icon {
+            color: var(--error);
+        }
+        
+        .toast.warning {
+            border-left: 4px solid var(--warning);
+        }
+        
+        .toast.warning .toast-icon {
+            color: var(--warning);
+        }
+        
+        .toast-content {
+            flex: 1;
+        }
+        
+        .toast-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            font-size: 16px;
+        }
+        
+        .toast-message {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .toast-close {
+            cursor: pointer;
+            color: #94a3b8;
+            transition: color 0.2s;
+        }
+        
+        .toast-close:hover {
+            color: var(--dark);
+        }
+        
+        .summary-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--gray);
+        }
+        
+        .summary-title {
+            flex: 1;
+        }
+        
+        .summary-title h2 {
+            margin: 0;
+        }
+        
+        .summary-meta {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .summary-thumbnail {
+            width: 180px;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .summary-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .copy-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: rgba(30, 41, 59, 0.9);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        .copy-notification.show {
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.05);
+                opacity: 0.8;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: all 0.3s;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature-icon {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+            border-radius: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .feature-icon svg {
+            width: 32px;
+            height: 32px;
+            color: var(--primary);
+        }
+        
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+        
+        .feature-description {
+            font-size: 14px;
+            color: #64748b;
+            line-height: 1.6;
+        }
+        
+        .features-section {
+            margin: 80px 0;
+        }
+        
+        .features-header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        
+        .features-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--dark);
+        }
+        
+        .features-description {
+            font-size: 16px;
+            color: #64748b;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 30px;
+        }
+        
+        footer {
+            background-color: white;
+            padding: 50px 0 30px;
+            border-top: 1px solid var(--gray);
+            margin-top: 80px;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .footer-logo svg {
+            width: 24px;
+            height: 24px;
+            fill: var(--primary);
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .footer-link {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary);
+        }
+        
+        .footer-bottom {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 14px;
+            color: #94a3b8;
+        }
+        
+        .highlight-text {
+            background: linear-gradient(to right, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            font-weight: 600;
+        }
+        
+        .input-error {
+            border-color: var(--error) !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+        }
+        
+        .error-message {
+            color: var(--error);
+            font-size: 12px;
+            margin-top: 6px;
+            display: none;
+        }
+        
+        .error-message.show {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+        
+        /* Media Queries */
+        @media (max-width: 992px) {
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .video-info {
+                flex-direction: column;
+            }
+            
+            .video-thumbnail {
+                width: 100%;
+                height: auto;
+                aspect-ratio: 16/9;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 32px;
+            }
+            
+            .url-input {
+                flex-direction: column;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .footer-logo {
+                justify-content: center;
+            }
+            
+            .progress-steps {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
+                </svg>
+                <span>AnalisaTube</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="hero">
+                <h1>Análise e Resumo de Vídeos do YouTube</h1>
+                <p class="subtitle">Transforme qualquer vídeo do YouTube em um resumo detalhado com os principais pontos e destaques em segundos.</p>
+            </div>
+            
+            <div class="url-input">
+                <div class="input-wrapper">
+                    <svg class="url-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                    </svg>
+                    <input type="text" id="video-url" placeholder="Cole a URL do vídeo do YouTube aqui" />
+                    <div id="error-message" class="error-message">Por favor, insira uma URL válida do YouTube</div>
+                </div>
+                <button id="analyze-btn" class="btn-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    Analisar Vídeo
+                </button>
+            </div>
+            
+            <div class="features-section">
+                <div class="features-header">
+                    <h2 class="features-title">Como o <span class="highlight-text">AnalisaTube</span> funciona?</h2>
+                    <p class="features-description">Nossa tecnologia avançada de IA analisa vídeos do YouTube para fornecer resumos detalhados em minutos.</p>
+                </div>
+                
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                                <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Extração de Áudio</h3>
+                        <p class="feature-description">Extraímos automaticamente o áudio do vídeo do YouTube para processamento de alta qualidade.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                                <line x1="9" y1="10" x2="15" y2="10"></line>
+                                <line x1="12" y1="7" x2="12" y2="13"></line>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Transcrição Avançada</h3>
+                        <p class="feature-description">Nossa IA converte o áudio em texto com alta precisão, incluindo reconhecimento de terminologias específicas.</p>
+                    </div>
+                    
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                        </div>
+                        <h3 class="feature-title">Síntese Inteligente</h3>
+                        <p class="feature-description">Nossa IA analisa o conteúdo e cria um resumo estruturado destacando os pontos mais importantes do vídeo.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="video-preview card" id="video-preview">
+                <div class="section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
+                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                    </svg>
+                    Detalhes do Vídeo
+                </div>
+                <div class="video-info">
+                    <div class="video-thumbnail">
+                        <img id="thumbnail" src="/api/placeholder/320/180" alt="Thumbnail do vídeo" />
+                    </div>
+                    <div class="video-details">
+                        <div class="video-title" id="video-title">Título do Vídeo</div>
+                        <div class="video-channel">
+                            <div class="channel-icon" id="channel-icon">T</div>
+                            <span id="video-channel">Nome do Canal</span>
+                        </div>
+                        <div class="video-stats">
+                            <div class="stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                                <span id="view-count">0 visualizações</span>
+                            </div>
+                            <div class="stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                                </svg>
+                                <span id="comment-count">0 comentários</span>
+                            </div>
+                            <div class="stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"></path>
+                                    <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
+                                </svg>
+                                <span id="like-count">0 curtidas</span>
+                            </div>
+                            <div class="stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                <span id="publish-date">Data de publicação</span>
+                            </div>
+                            <div class="stat">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                <span id="duration">Duração</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button id="start-analysis-btn" class="pulse-animation">Iniciar Análise Completa</button>
+            </div>
+            
+            <div class="progress-container card" id="progress-container">
+                <div class="section-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 20V10"></path>
+                        <path d="M12 20V4"></path>
+                        <path d="M6 20v-6"></path>
+                    </svg>
+                    Analisando Vídeo
+                </div>
+                
+                <div class="progress-steps">
+                    <div class="step active" id="step-1">
+                        <div class="step-icon">1</div>
+                        <div class="step-label">Extração</div>
+                    </div>
+                    <div class="step" id="step-2">
+                        <div class="step-icon">2</div>
+                        <div class="step-label">Transcrição</div>
+                    </div>
+                    <div class="step" id="step-3">
+                        <div class="step-icon">3</div>
+                        <div class="step-label">Análise</div>
+                    </div>
+                    <div class="step" id="step-4">
+                        <div class="step-icon">4</div>
+                        <div class="step-label">Finalização</div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="status" id="status">Extraindo áudio do vídeo...</div>
+                <div class="animation-container" id="animation-container"></div>
+            </div>
+            
+            <div class="result-container card" id="result-container">
+                <div class="summary-header">
+                    <div class="summary-title">
+                        <h2>Resumo do Vídeo</h2>
+                        <div class="summary-meta" id="summary-meta">
+                            Gerado em <span id="generation-time">2 minutos</span> • <span id="summary-date">18 de abril de 2025</span>
+                        </div>
+                    </div>
+                    <div class="summary-thumbnail">
+                        <img id="summary-thumbnail" src="/api/placeholder/180/100" alt="Thumbnail do vídeo">
+                    </div>
+                </div>
+                
+                <div class="summary-content" id="summary-content"></div>
+                
+                <div class="result-actions">
+                    <button class="secondary btn-icon" id="copy-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Copiar Resumo
+                    </button>
+                    <button class="secondary btn-icon" id="download-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Baixar Markdown
+                    </button>
+                    <button class="btn-icon" id="new-analysis-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 2v6h6"></path>
+                            <path d="M3 13a9 9 0 1 0 3-7.7L3 8"></path>
+                        </svg>
+                        Nova Análise
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="copy-notification" class="copy-notification">
+        Resumo copiado para a área de transferência!
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"></path>
+                    </svg>
+                    <span>AnalisaTube</span>
+                </div>
+                
+                <div class="footer-links">
+                    <a href="#" class="footer-link">Sobre</a>
+                    <a href="#" class="footer-link">Como Funciona</a>
+                    <a href="#" class="footer-link">Termos de Uso</a>
+                    <a href="#" class="footer-link">Política de Privacidade</a>
+                    <a href="#" class="footer-link">Contato</a>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                &copy; 2025 AnalisaTube. Todos os direitos reservados.
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elementos
+            const videoUrlInput = document.getElementById('video-url');
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const videoPreview = document.getElementById('video-preview');
+            const startAnalysisBtn = document.getElementById('start-analysis-btn');
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress');
+            const statusEl = document.getElementById('status');
+            const resultContainer = document.getElementById('result-container');
+            const summaryContent = document.getElementById('summary-content');
+            const copyBtn = document.getElementById('copy-btn');
+            const downloadBtn = document.getElementById('download-btn');
+            const newAnalysisBtn = document.getElementById('new-analysis-btn');
+            const toastContainer = document.getElementById('toast-container');
+            const animationContainer = document.getElementById('animation-container');
+            const copyNotification = document.getElementById('copy-notification');
+            const errorMessage = document.getElementById('error-message');
+            const summaryThumbnail = document.getElementById('summary-thumbnail');
+            const summaryMeta = document.getElementById('summary-meta');
+            const generationTime = document.getElementById('generation-time');
+            const summaryDate = document.getElementById('summary-date');
+            
+            // Elementos de thumbnail e informações do vídeo
+            const thumbnailEl = document.getElementById('thumbnail');
+            const videoTitleEl = document.getElementById('video-title');
+            const channelIconEl = document.getElementById('channel-icon');
+            const videoChannelEl = document.getElementById('video-channel');
+            const viewCountEl = document.getElementById('view-count');
+            const commentCountEl = document.getElementById('comment-count');
+            const likeCountEl = document.getElementById('like-count');
+            const publishDateEl = document.getElementById('publish-date');
+            const durationEl = document.getElementById('duration');
+            
+            // Etapas do processo
+            const step1 = document.getElementById('step-1');
+            const step2 = document.getElementById('step-2');
+            const step3 = document.getElementById('step-3');
+            const step4 = document.getElementById('step-4');
+            
+            // Aplicar animações na inicialização
+            gsap.to('.hero', { 
+                opacity: 1, 
+                y: 0, 
+                duration: 0.8, 
+                ease: 'power2.out' 
+            });
+            
+            gsap.to('.url-input', { 
+                opacity: 1, 
+                y: 0, 
+                duration: 0.8, 
+                ease: 'power2.out',
+                delay: 0.2
+            });
+            
+            gsap.to('.feature-card', { 
+                opacity: 1, 
+                y: 0, 
+                duration: 0.6, 
+                ease: 'power2.out',
+                stagger: 0.1,
+                delay: 0.4
+            });
+            
+            // Dados de exemplo de vídeo para demonstração
+            const sampleVideoData = {
+                title: 'Como a Inteligência Artificial Está Transformando o Mundo',
+                channel: 'Tech Insights Brasil',
+                channelInitial: 'T',
+                views: '1.2M',
+                comments: '8.5K',
+                likes: '95K',
+                publishDate: '12 de janeiro de 2025',
+                duration: '18:42',
+                thumbnail: '/api/placeholder/320/180'
+            };
+            
+            // Resumo de exemplo
+            const sampleSummary = `# Resumo: Como a IA Está Transformando o Mundo
+
+## Introdução
+O vídeo apresenta uma visão abrangente sobre como a inteligência artificial está revolucionando diversos setores da sociedade moderna. O apresentador começa contextualizando o rápido avanço da IA nos últimos cinco anos e como esse crescimento exponencial está superando as expectativas anteriores.
+
+## Principais Setores Impactados
+
+### Saúde
+- Diagnósticos médicos mais precisos com 97% de acurácia em detecção precoce de câncer
+- Desenvolvimento de medicamentos em tempo recorde (redução de 5 anos para 8 meses)
+- Monitoramento remoto de pacientes com análise preditiva de complicações
+
+### Educação
+- Plataformas adaptativas que personalizam o aprendizado conforme o ritmo do estudante
+- Tutores virtuais disponíveis 24/7 para esclarecer dúvidas
+- Sistemas de avaliação que identificam lacunas de conhecimento específicas
+
+### Mercado de Trabalho
+- Automação de tarefas repetitivas liberando profissionais para trabalho criativo
+- Criação de novas profissões como: Engenheiro de Prompt, Especialista em Ética de IA
+- Necessidade urgente de requalificação profissional em habilidades complementares à IA
+
+## Desafios Éticos
+O vídeo destaca preocupações importantes sobre vieses algorítmicos, privacidade de dados e concentração de poder tecnológico, sugerindo a necessidade de uma governança global para IA.
+
+## Conclusão
+A mensagem final enfatiza que estamos vivendo um momento histórico de transformação comparável à revolução industrial, mas em escala muito mais acelerada. A preparação para esta nova era requer tanto adaptação tecnológica quanto discussões éticas profundas sobre o futuro que queremos construir.`;
+            
+            // Configuração da animação Lottie
+            let animationInstance;
+            
+            // Função para carregar a animação Lottie
+            function loadLottieAnimation() {
+                animationInstance = lottie.loadAnimation({
+                    container: animationContainer,
+                    renderer: 'svg',
+                    loop: true,
+                    autoplay: true,
+                    path: 'https://assets3.lottiefiles.com/packages/lf20_vbfvmi5g.json'
+                });
+            }
+            
+            // Event listeners
+            analyzeBtn.addEventListener('click', fetchVideoInfo);
+            startAnalysisBtn.addEventListener('click', startAnalysis);
+            copyBtn.addEventListener('click', copyToClipboard);
+            downloadBtn.addEventListener('click', downloadMarkdown);
+            newAnalysisBtn.addEventListener('click', resetAnalysis);
+            
+            // Validação de URL ao digitar
+            videoUrlInput.addEventListener('input', function() {
+                const url = this.value.trim();
+                
+                if (url && !isValidYouTubeUrl(url)) {
+                    videoUrlInput.classList.add('input-error');
+                    errorMessage.classList.add('show');
+                } else {
+                    videoUrlInput.classList.remove('input-error');
+                    errorMessage.classList.remove('show');
+                }
+            });
+            
+            // Funções
+            function fetchVideoInfo() {
+                const url = videoUrlInput.value.trim();
+                
+                if (!url) {
+                    showToast('Aviso', 'Por favor, insira uma URL do YouTube', 'warning');
+                    videoUrlInput.focus();
+                    return;
+                }
+                
+                if (!isValidYouTubeUrl(url)) {
+                    showToast('Erro', 'URL inválida! Insira uma URL válida do YouTube', 'error');
+                    videoUrlInput.classList.add('input-error');
+                    errorMessage.classList.add('show');
+                    videoUrlInput.focus();
+                    return;
+                }
+                
+                // Animação de carregamento
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<svg class="spinner" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M16.2 7.8l-2.8 2.8"></path></svg> Carregando...';
+                
+                // Simular requisição de API (em produção, usar fetch real para a API)
+                setTimeout(() => {
+                    updateVideoPreview(sampleVideoData);
+                    
+                    // Animação de entrada do preview
+                    videoPreview.style.display = 'block';
+                    gsap.fromTo(videoPreview, 
+                        { opacity: 0, y: 20 }, 
+                        { opacity: 1, y: 0, duration: 0.6, ease: 'power2.out' }
+                    );
+                    
+                    // Restaurar botão
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> Analisar Vídeo';
+                    
+                    // Scroll para o preview
+                    videoPreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 1500);
+            }
+            
+            function updateVideoPreview(data) {
+                // Animações para atualizar os elementos do preview
+                gsap.fromTo(thumbnailEl, 
+                    { opacity: 0 }, 
+                    { opacity: 1, duration: 0.5, delay: 0.2 }
+                );
+                
+                thumbnailEl.src = data.thumbnail;
+                videoTitleEl.textContent = data.title;
+                channelIconEl.textContent = data.channelInitial;
+                videoChannelEl.textContent = data.channel;
+                viewCountEl.textContent = data.views + ' visualizações';
+                commentCountEl.textContent = data.comments + ' comentários';
+                likeCountEl.textContent = data.likes + ' curtidas';
+                publishDateEl.textContent = data.publishDate;
+                durationEl.textContent = data.duration;
+                
+                // Animar os stats um por um
+                gsap.fromTo('.stat', 
+                    { opacity: 0, y: 10 }, 
+                    { opacity: 1, y: 0, duration: 0.4, stagger: 0.1, delay: 0.3 }
+                );
+            }
+            
+            function startAnalysis() {
+                // Ocultar preview e mostrar progresso com animações
+                gsap.to(videoPreview, {
+                    opacity: 0,
+                    y: -20,
+                    duration: 0.5,
+                    onComplete: function() {
+                        videoPreview.style.display = 'none';
+                        progressContainer.style.display = 'block';
+                        
+                        gsap.fromTo(progressContainer,
+                            { opacity: 0, y: 20 },
+                            { opacity: 1, y: 0, duration: 0.5 }
+                        );
+                        
+                        // Carregar animação Lottie
+                        loadLottieAnimation();
+                        
+                        // Iniciar simulação de progresso
+                        simulateProgress();
+                    }
+                });
+            }
+            
+            function simulateProgress() {
+                let progress = 0;
+                let currentStep = 1;
+                
+                const interval = setInterval(() => {
+                    progress += 1;
+                    progressBar.style.width = `${progress}%`;
+                    
+                    // Atualizar etapas com base no progresso
+                    if (progress >= 25 && currentStep === 1) {
+                        updateStep(2);
+                        currentStep = 2;
+                    } else if (progress >= 50 && currentStep === 2) {
+                        updateStep(3);
+                        currentStep = 3;
+                    } else if (progress >= 75 && currentStep === 3) {
+                        updateStep(4);
+                        currentStep = 4;
+                    }
+                    
+                    // Atualizar texto de status
+                    if (progress <= 25) {
+                        statusEl.textContent = 'Extraindo áudio do vídeo...';
+                    } else if (progress <= 50) {
+                        statusEl.textContent = 'Transcrevendo o conteúdo...';
+                    } else if (progress <= 75) {
+                        statusEl.textContent = 'Analisando e gerando resumo...';
+                    } else {
+                        statusEl.textContent = 'Finalizando...';
+                    }
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(completeAnalysis, 500);
+                    }
+                }, 80);
+            }
+            
+            function updateStep(stepNumber) {
+                // Marcar etapa anterior como concluída
+                if (stepNumber > 1) {
+                    document.getElementById(`step-${stepNumber-1}`).classList.remove('active');
+                    document.getElementById(`step-${stepNumber-1}`).classList.add('completed');
+                }
+                
+                // Ativar etapa atual
+                document.getElementById(`step-${stepNumber}`).classList.add('active');
+                
+                // Efeito de animação na etapa atual
+                gsap.fromTo(`#step-${stepNumber} .step-icon`,
+                    { scale: 0.8 },
+                    { scale: 1.1, duration: 0.4, yoyo: true, repeat: 1 }
+                );
+            }
+            
+            function completeAnalysis() {
+                // Parar a animação Lottie
+                if (animationInstance) {
+                    animationInstance.destroy();
+                }
+                
+                // Ocultar progresso e mostrar resultado com animações
+                gsap.to(progressContainer, {
+                    opacity: 0,
+                    y: -20,
+                    duration: 0.5,
+                    onComplete: function() {
+                        progressContainer.style.display = 'none';
+                        resultContainer.style.display = 'block';
+                        
+                        // Animação para o container de resultado
+                        gsap.fromTo(resultContainer,
+                            { opacity: 0, y: 20 },
+                            { opacity: 1, y: 0, duration: 0.6 }
+                        );
+                        
+                        // Converter markdown para HTML
+                        summaryContent.innerHTML = markdownToHtml(sampleSummary);
+                        
+                        // Atualizar thumbnail e metadados
+                        summaryThumbnail.src = sampleVideoData.thumbnail;
+                        
+                        // Data atual formatada
+                        const today = new Date();
+                        const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                        summaryDate.textContent = today.toLocaleDateString('pt-BR', options);
+                        
+                        // Animação para os elementos do resumo
+                        gsap.fromTo('.summary-content *',
+                            { opacity: 0, y: 15 },
+                            { opacity: 1, y: 0, duration: 0.4, stagger: 0.05, delay: 0.3 }
+                        );
+                        
+                        // Scroll para o resultado
+                        resultContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        
+                        showToast('Sucesso', 'Análise concluída com sucesso!', 'success');
+                    }
+                });
+            }
+            
+            function copyToClipboard() {
+                navigator.clipboard.writeText(sampleSummary)
+                    .then(() => {
+                        // Mostrar notificação de cópia
+                        copyNotification.classList.add('show');
+                        setTimeout(() => {
+                            copyNotification.classList.remove('show');
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        showToast('Erro', 'Erro ao copiar texto', 'error');
+                        console.error('Failed to copy text: ', err);
+                    });
+                
+                // Animação no botão
+                gsap.fromTo(copyBtn, { scale: 1 }, { scale: 0.95, yoyo: true, repeat: 1, duration: 0.2 });
+            }
+            
+            function downloadMarkdown() {
+                const blob = new Blob([sampleSummary], { type: 'text/markdown' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'resumo_video.md';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showToast('Sucesso', 'Arquivo Markdown baixado!', 'success');
+                
+                // Animação no botão
+                gsap.fromTo(downloadBtn, { scale: 1 }, { scale: 0.95, yoyo: true, repeat: 1, duration: 0.2 });
+            }
+            
+            function resetAnalysis() {
+                // Animar saída do resultado
+                gsap.to(resultContainer, {
+                    opacity: 0,
+                    y: -20,
+                    duration: 0.5,
+                    onComplete: function() {
+                        resultContainer.style.display = 'none';
+                        videoUrlInput.value = '';
+                        videoUrlInput.focus();
+                        
+                        // Scroll para o topo com animação
+                        gsap.to(window, { duration: 1, scrollTo: { y: 0, offsetY: 0 }, ease: "power3.inOut" });
+                    }
+                });
+            }
+            
+            function showToast(title, message, type = 'success') {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                
+                // Ícone baseado no tipo
+                let iconSvg = '';
+                if (type === 'success') {
+                    iconSvg = '<svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+                } else if (type === 'warning') {
+                    iconSvg = '<svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                } else if (type === 'error') {
+                    iconSvg = '<svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                } else if (type === 'info') {
+                    iconSvg = '<svg class="toast-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                }
+                
+                toast.innerHTML = `
+                    <div class="toast-header">
+                        ${iconSvg}
+                        <span class="toast-title">${title}</span>
+                        <button class="toast-close">&times;</button>
+                    </div>
+                    <div class="toast-message">${message}</div>
+                `;
+                
+                // Adicionar ao container e configurar remoção automática
+                toastContainer.appendChild(toast);
+                
+                // Aparecer com animação
+                gsap.fromTo(toast, 
+                    { opacity: 0, x: 50 }, 
+                    { opacity: 1, x: 0, duration: 0.3, ease: 'power2.out' }
+                );
+                
+                // Configurar botão de fechar
+                const closeBtn = toast.querySelector('.toast-close');
+                closeBtn.addEventListener('click', () => removeToast(toast));
+                
+                // Auto-fechar após 5 segundos
+                setTimeout(() => removeToast(toast), 5000);
+            }
+            
+            function removeToast(toast) {
+                // Animação de saída
+                gsap.to(toast, {
+                    opacity: 0,
+                    x: 50,
+                    duration: 0.3,
+                    onComplete: function() {
+                        toast.remove();
+                    }
+                });
+            }
+            
+            function isValidYouTubeUrl(url) {
+                // Validação básica de URL do YouTube
+                const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/;
+                return youtubeRegex.test(url);
+            }
+            
+            function markdownToHtml(markdown) {
+                // Conversão básica de Markdown para HTML
+                
+                // Converter cabeçalhos
+                let html = markdown
+                    .replace(/^# (.*$)/gm, '<h1>$1</h1>')
+                    .replace(/^## (.*$)/gm, '<h2>$1</h2>')
+                    .replace(/^### (.*$)/gm, '<h3>$1</h3>')
+                    .replace(/^#### (.*$)/gm, '<h4>$1</h4>');
+                
+                // Converter listas
+                html = html.replace(/^\- (.*$)/gm, '<li>$1</li>');
+                html = html.replace(/<\/li>\n<li>/g, '</li><li>');
+                html = html.replace(/(<li>.*<\/li>)/gm, '<ul>$1</ul>');
+                html = html.replace(/<\/ul>\n<ul>/g, '');
+                
+                // Converter negrito e itálico
+                html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+                
+                // Converter links
+                html = html.replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2">$1</a>');
+                
+                // Converter parágrafos
+                html = html.replace(/^(?!<[h|u|o|l|a])(.*$)/gm, function(m) {
+                    if (m.trim() === '') return '';
+                    return '<p>' + m + '</p>';
+                });
+                
+                return html;
+            }
+            
+            // Inicialização
+            videoUrlInput.focus();
+        });
+    </script>
+</body>
+</html>
